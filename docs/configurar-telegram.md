@@ -82,7 +82,7 @@ Invoke-RestMethod `
   -ContentType "application/x-www-form-urlencoded" `
   -Body @{
     chat_id = $telegramChatId
-    text = "Prueba de Autonomous Agent Lab"
+    text = "Prueba de Agent Lab"
   }
 ```
 

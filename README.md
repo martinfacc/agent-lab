@@ -1,4 +1,4 @@
-# Autonomous Agent Lab
+# Agent Lab
 
 Piloto portable en un único contenedor para desarrollo autónomo sobre
 artefactos BMAD. Integra Hermes, `agent-control`, `bmad-loop` y GitHub Copilot

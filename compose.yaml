@@ -1,4 +1,4 @@
-name: autonomous-agent-lab
+name: agent-lab
 
 services:
   agent-lab:
@@ -10,8 +10,8 @@ services:
         UV_VERSION: "0.8.14"
         PRIME_AGENT_VERSION: "0.7.3"
         COPILOT_VERSION: "latest"
-    image: autonomous-agent-lab:0.1.0
-    container_name: autonomous-agent-lab
+    image: agent-lab:0.1.0
+    container_name: agent-lab
     restart: unless-stopped
     init: true
     tty: true
@@ -37,7 +37,7 @@ services:
       BMAD_USER_NAME: ${BMAD_USER_NAME:-}
       NOTIFY_CHANNELS: ${NOTIFY_CHANNELS:-}
       NOTIFY_EVENTS: ${NOTIFY_EVENTS:-paused,awaiting-operator,crashed,finished}
-      NOTIFY_PROJECT_NAME: ${NOTIFY_PROJECT_NAME:-Autonomous Agent Lab}
+      NOTIFY_PROJECT_NAME: ${NOTIFY_PROJECT_NAME:-Agent Lab}
       NOTIFY_MONITOR_URL: ${NOTIFY_MONITOR_URL:-http://localhost:9121}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}

@@ -29,4 +29,4 @@ export function createServer(): McpServer {
 }
 
 void serveStdio(createServer);
-console.error(`autonomous-agent-lab-control v${packageVersion} ejecutándose por stdio`);
+console.error(`agent-lab-control v${packageVersion} ejecutándose por stdio`);

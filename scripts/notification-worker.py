@@ -220,7 +220,7 @@ def friendly_notification(run_id: str, title: str, message: str) -> tuple[str, s
 
 
 def format_message(run_id: str, title: str, message: str) -> tuple[str, str]:
-    project_name = os.environ.get("NOTIFY_PROJECT_NAME", "Autonomous Agent Lab").strip()
+    project_name = os.environ.get("NOTIFY_PROJECT_NAME", "Agent Lab").strip()
     monitor_url = os.environ.get("NOTIFY_MONITOR_URL", "http://localhost:9121").strip()
     friendly_title, friendly_body = friendly_notification(run_id, title, message)
     heading = f"{project_name} - {friendly_title}"

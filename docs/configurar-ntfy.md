@@ -1,7 +1,7 @@
 # Configurar notificaciones por ntfy
 
 ntfy permite recibir avisos en el teléfono o en un navegador mediante un tópico.
-No hace falta crear un bot. Autonomous Agent Lab solamente publica mensajes; no
+No hace falta crear un bot. Agent Lab solamente publica mensajes; no
 recibe comandos desde ntfy.
 
 ## Datos necesarios
@@ -63,7 +63,7 @@ Invoke-RestMethod `
   -Method Post `
   -Uri "https://ntfy.sh/$ntfyTopic" `
   -Headers @{
-    Title = "Autonomous Agent Lab"
+    Title = "Agent Lab"
     Priority = "high"
     Tags = "robot,heavy_check_mark"
   } `
