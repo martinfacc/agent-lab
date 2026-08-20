@@ -1,6 +1,8 @@
 # Autonomous Agent Lab
 
-Piloto portable en un único contenedor para desarrollo autónomo con BMAD e investigación profunda persistente. Integra Hermes, `agent-control`, BMAD/`bmad-loop`, GitHub Copilot CLI, OpenCode y Prime Agent.
+Piloto portable en un único contenedor para desarrollo autónomo sobre
+artefactos BMAD. Integra Hermes, `agent-control`, `bmad-loop` y GitHub Copilot
+CLI. La investigación persistente con Prime Agent es opcional.
 
 ## Seguridad del piloto
 
@@ -16,14 +18,17 @@ Piloto portable en un único contenedor para desarrollo autónomo con BMAD e inv
 ## Requisitos
 
 - Docker Desktop con Compose v2.
-- Un repositorio Git ya inicializado con BMAD.
+- Un repositorio Git con los artefactos de planificación e implementación que
+  usará el desarrollo. No necesita tener BMAD instalado.
 - Una cuenta de GitHub con acceso al repositorio.
 - Una suscripción de GitHub Copilot con Copilot CLI habilitado.
 - Recomendado: 8 GB de RAM libres, 4 núcleos y 20 GB de disco libres.
 
 ## Inicio rápido
 
-1. Copiá `.env.example` como `.env` y completá rutas, identidad Git y un `RESEARCH_MODEL` habilitado. En Windows usá barras `/` y no agregues comillas.
+1. Copiá `.env.example` como `.env` y completá las rutas y la identidad Git.
+   En Windows usá barras `/` y no agregues comillas. `RESEARCH_MODEL` sólo se
+   configura si elegís `LAB_MODE=full`.
 2. Creá la carpeta indicada por `OUTPUT_PATH`.
 3. Construí y autenticá:
 
@@ -70,7 +75,7 @@ El build copia `components/agent-control` directamente. No clona otro repositori
 
 | Ruta del host | Ruta del contenedor | Propósito |
 |---|---|---|
-| `PROJECT_PATH` | `/workspace/project` | Repositorio Git/BMAD de trabajo |
+| `PROJECT_PATH` | `/workspace/project` | Repositorio Git de trabajo |
 | `OUTPUT_PATH` | `/workspace/output` | Informes, logs y estado de control |
 
 ```text
@@ -99,8 +104,10 @@ La imagen controla internamente la versión compatible de BMAD Method. Esa versi
 no forma parte de la configuración del usuario ni impone una instalación sobre el
 repositorio.
 
-El equipo solo debe garantizar que los artefactos requeridos existan e indicar
-sus ubicaciones desde `.env`:
+El equipo sólo debe garantizar que existan los artefactos que consumirá el
+desarrollo. Esto incluye `sprint-status.yaml`, las especificaciones de las
+stories pendientes y los documentos de planificación que esas stories usen.
+Sus ubicaciones se indican desde `.env`:
 
 ```env
 BMAD_OUTPUT_DIR=docs/bmad
@@ -108,9 +115,10 @@ BMAD_PLANNING_ARTIFACTS_DIR=docs/bmad/planning
 BMAD_IMPLEMENTATION_ARTIFACTS_DIR=docs/bmad/development
 ```
 
-Las rutas son relativas al proyecto. Si las dos últimas quedan vacías se derivan
-de `BMAD_OUTPUT_DIR`. `agent-control` recibe automáticamente la ubicación real de
-`sprint-status.yaml`; no asume que exista `_bmad-output`.
+Las rutas son relativas al proyecto. Si las dos últimas quedan vacías se
+derivan de `BMAD_OUTPUT_DIR`. El archivo `sprint-status.yaml` debe estar dentro
+de `BMAD_IMPLEMENTATION_ARTIFACTS_DIR`. `agent-control` recibe automáticamente
+esa ubicación; no asume que exista `_bmad-output`.
 
 La política conserva `max_parallel = 1` dentro de cada run. El aislamiento por story evita que distintas ejecuciones coordinadas por `agent-control` compartan archivos o el índice Git.
 
@@ -118,7 +126,8 @@ Las credenciales y sesiones se mantienen en volúmenes Docker. Recrear el conten
 
 ## Git privado
 
-`lab setup` ejecuta `gh auth login` y `gh auth setup-git`. El contenedor configura `core.autocrlf=input`. Revisá y publicá los cambios manualmente:
+`lab setup` ejecuta `gh auth login` y `gh auth setup-git`. El contenedor configura
+`core.autocrlf=input`.
 
 Cuando una herramienta necesita abrir GitHub, el contenedor muestra una URL para abrir manualmente en el navegador de Windows. No intenta ejecutar un navegador gráfico dentro de Docker.
 
@@ -131,6 +140,8 @@ docker compose exec -it agent-lab lab login-prime
 docker compose exec -it agent-lab lab setup-hermes
 ```
 
+Revisá y publicá los cambios manualmente:
+
 ```console
 docker compose exec agent-lab git status
 docker compose exec agent-lab git push
@@ -138,7 +149,10 @@ docker compose exec agent-lab git push
 
 ## Proveedores
 
-`LAB_PROVIDER=copilot` es el valor predeterminado para desarrollo. Prime usa `RESEARCH_PROVIDER=github-copilot`; su modelo es obligatorio porque depende del plan. OpenCode queda instalado como alternativa.
+`LAB_PROVIDER=copilot` es el valor predeterminado para desarrollo. No hace falta
+configurar Prime ni OpenCode. En modo `full`, Prime usa
+`RESEARCH_PROVIDER=github-copilot` y requiere un `RESEARCH_MODEL` disponible en
+la suscripción del usuario.
 
 ## Modos
 
