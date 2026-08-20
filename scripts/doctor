@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+runtime_env="${BMAD_RUNTIME_ENV:-/workspace/output/control/bmad-runtime.env}"
+if [ -f "$runtime_env" ]; then
+  # shellcheck disable=SC1090
+  source "$runtime_env"
+fi
+
+failures=0
+check_command() {
+  local command_name="$1"
+  if command -v "$command_name" >/dev/null 2>&1; then
+    printf 'ok   %-18s %s\n' "$command_name" "$(command -v "$command_name")"
+  else
+    printf 'FALLA %-17s no encontrado\n' "$command_name"
+    failures=$((failures + 1))
+  fi
+}
+
+for command_name in git gh node npm hermes bmad-loop copilot opencode; do
+  check_command "$command_name"
+done
+
+if [ "${LAB_MODE:-development}" = 'full' ]; then
+  check_command prime-agent
+else
+  echo 'OMITIDO investigación     LAB_MODE=development'
+fi
+
+if git -C /workspace/project rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo 'ok   proyecto           repositorio Git montado'
+else
+  echo 'FALLA proyecto          /workspace/project no es un repositorio Git'
+  failures=$((failures + 1))
+fi
+
+if test -w /workspace/project; then
+  echo 'ok   escritura-proyecto habilitada'
+else
+  echo 'FALLA escritura-proyecto sin permisos de escritura'
+  failures=$((failures + 1))
+fi
+
+if test -w /workspace/output; then
+  echo 'ok   escritura-salida   habilitada'
+else
+  echo 'FALLA escritura-salida  sin permisos de escritura'
+  failures=$((failures + 1))
+fi
+
+gh auth status >/dev/null 2>&1 && echo 'ok   autenticación-github iniciada' || echo 'AVISO autenticación-github ejecutá: docker compose run --rm agent-lab setup'
+git -C /workspace/project status --short --branch || failures=$((failures + 1))
+echo "info BMAD               origen=${BMAD_ORIGIN:-desconocido}"
+echo "info sprint-status      ${BMAD_SPRINT_STATUS_PATH:-no resuelto}"
+bmad-loop validate --project /workspace/project || failures=$((failures + 1))
+if [ "${LAB_MODE:-development}" = 'full' ]; then
+  prime-agent doctor || failures=$((failures + 1))
+fi
+hermes mcp test agent-control || failures=$((failures + 1))
+
+exit "$failures"

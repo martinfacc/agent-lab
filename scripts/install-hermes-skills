@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source_dir='/usr/local/share/agent-lab/hermes-skills'
+target_dir="${HERMES_HOME:-$HOME/.hermes}/skills/agent-lab"
+
+[ -d "$source_dir" ] || exit 0
+mkdir -p "$target_dir"
+
+while IFS= read -r -d '' skill_dir; do
+  skill_name="$(basename "$skill_dir")"
+  destination="$target_dir/$skill_name"
+  mkdir -p "$destination/references"
+  install -m 0644 "$skill_dir/SKILL.md" "$destination/SKILL.md"
+  if [ -d "$skill_dir/references" ]; then
+    while IFS= read -r -d '' reference; do
+      install -m 0644 "$reference" "$destination/references/$(basename "$reference")"
+    done < <(find "$skill_dir/references" -maxdepth 1 -type f -print0)
+  fi
+done < <(find "$source_dir" -mindepth 1 -maxdepth 1 -type d -print0)

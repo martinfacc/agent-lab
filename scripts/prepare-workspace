@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project='/workspace/project'
+exclude_file="$project/.git/info/exclude"
+
+git -C "$project" rev-parse --is-inside-work-tree >/dev/null
+mkdir -p "$(dirname "$exclude_file")"
+touch "$exclude_file"
+for pattern in \
+  '/.bmad-loop/' \
+  '/.github/copilot/settings.json' \
+  '/.agents/skills/bmad-loop-resolve/' \
+  '/.agents/skills/bmad-loop-setup/' \
+  '/.agents/skills/bmad-loop-sweep/' \
+  '/_bmad/render/'
+do
+  grep -Fqx "$pattern" "$exclude_file" || printf '%s\n' "$pattern" >>"$exclude_file"
+done
+
+/usr/local/lib/agent-lab/prepare-bmad.py
+runtime_env="${BMAD_RUNTIME_ENV:-/workspace/output/control/bmad-runtime.env}"
+# shellcheck disable=SC1090
+source "$runtime_env"
+
+if [ "${BMAD_ORIGIN:-}" = 'external' ]; then
+  for pattern in '/_bmad/' '/.agents/skills/bmad-*/'; do
+    grep -Fqx "$pattern" "$exclude_file" || printf '%s\n' "$pattern" >>"$exclude_file"
+  done
+fi
+
+gitignore_backup="$(mktemp)"
+had_gitignore=false
+if [ -f "$project/.gitignore" ]; then
+  cp "$project/.gitignore" "$gitignore_backup"
+  had_gitignore=true
+fi
+
+bmad-loop init --project "$project" --cli copilot >/dev/null
+
+if [ "$had_gitignore" = true ]; then
+  cp "$gitignore_backup" "$project/.gitignore"
+else
+  rm -f "$project/.gitignore"
+fi
+rm -f "$gitignore_backup"
+
+policy="$project/.bmad-loop/policy.toml"
+sed -i '/^\[adapter\]$/,/^\[/{s/^name = "claude"/name = "copilot"/;}' "$policy"
+
+copilot_model="${COPILOT_MODEL:-}"
+if [ -n "$copilot_model" ]; then
+  if [[ ! "$copilot_model" =~ ^[A-Za-z0-9._:/-]+$ ]]; then
+    echo 'COPILOT_MODEL contiene caracteres no válidos.' >&2
+    exit 1
+  fi
+  sed -i "/^\[adapter\]$/,/^\[/{s|^model = \"[^\"]*\"|model = \"$copilot_model\"|;}" "$policy"
+fi
+sed -i '/^\[scm\]$/,/^\[/{s/^isolation = "none"/isolation = "worktree"/;s/^branch_per = "[^"]*"/branch_per = "story"/;s/^delete_branch = false/delete_branch = true/;s/^max_parallel = [0-9][0-9]*/max_parallel = 1/;}' "$policy"
+
+if ! grep -A 3 '^\[adapter\]$' "$policy" | grep -q '^name = "copilot"'; then
+  echo 'No se pudo configurar Copilot como adaptador de bmad-loop.' >&2
+  exit 1
+fi
+
+if [ -n "$copilot_model" ]; then
+  configured_model="$(sed -n '/^\[adapter\]$/,/^\[/{s/^model = "\([^"]*\)".*/\1/p;}' "$policy" | head -n 1)"
+  if [ "$configured_model" != "$copilot_model" ]; then
+    echo 'No se pudo fijar COPILOT_MODEL en bmad-loop.' >&2
+    exit 1
+  fi
+fi
+
+if ! sed -n '/^\[scm\]$/,/^\[/p' "$policy" | grep -q '^isolation = "worktree"'; then
+  echo 'No se pudo configurar el aislamiento por worktree.' >&2
+  exit 1
+fi
+
+copilot_settings='/home/agent/.copilot/settings.json'
+copilot_settings_tmp="$(mktemp)"
+subagent_names="${COPILOT_SUBAGENT_NAMES:-explore,task,code-review,general-purpose,research,security-review,rubber-duck}"
+subagent_model="${COPILOT_SUBAGENT_MODEL:-inherit}"
+subagent_effort="${COPILOT_SUBAGENT_EFFORT:-inherit}"
+subagent_context="${COPILOT_SUBAGENT_CONTEXT:-inherit}"
+
+if [[ ! "$subagent_names" =~ ^[A-Za-z0-9_-]+(,[A-Za-z0-9_-]+)*$ ]]; then
+  echo 'COPILOT_SUBAGENT_NAMES debe contener nombres separados por comas.' >&2
+  exit 1
+fi
+if [[ ! "$subagent_model" =~ ^[A-Za-z0-9._:/-]+$ ]]; then
+  echo 'COPILOT_SUBAGENT_MODEL contiene caracteres no válidos.' >&2
+  exit 1
+fi
+if [[ ! "$subagent_effort" =~ ^(inherit|none|minimal|low|medium|high|xhigh|max)$ ]]; then
+  echo 'COPILOT_SUBAGENT_EFFORT no es válido.' >&2
+  exit 1
+fi
+if [[ ! "$subagent_context" =~ ^(inherit|default|long_context)$ ]]; then
+  echo 'COPILOT_SUBAGENT_CONTEXT no es válido.' >&2
+  exit 1
+fi
+
+if [ -f "$copilot_settings" ]; then
+  jq --arg folder "$project" --arg names "$subagent_names" \
+    --arg model "$subagent_model" --arg effort "$subagent_effort" \
+    --arg context "$subagent_context" \
+    '.trustedFolders = ((.trustedFolders // []) + [$folder] | unique) |
+     .subagents.agents = reduce ($names | split(","))[] as $name
+       ((.subagents.agents // {});
+        .[$name] = ((.[$name] // {}) + {
+          model: $model, effortLevel: $effort, contextTier: $context
+        }))' \
+    "$copilot_settings" >"$copilot_settings_tmp"
+else
+  jq -n --arg folder "$project" --arg names "$subagent_names" \
+    --arg model "$subagent_model" --arg effort "$subagent_effort" \
+    --arg context "$subagent_context" \
+    '{trustedFolders: [$folder], subagents: {agents: {}}} |
+     .subagents.agents = reduce ($names | split(","))[] as $name
+       ({}; .[$name] = {
+         model: $model, effortLevel: $effort, contextTier: $context
+       })' \
+    >"$copilot_settings_tmp"
+fi
+mv "$copilot_settings_tmp" "$copilot_settings"
+
+echo "Proyecto operativo listo: $project"

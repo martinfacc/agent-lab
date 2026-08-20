@@ -1,0 +1,85 @@
+name: autonomous-agent-lab
+
+services:
+  agent-lab:
+    build:
+      context: .
+      args:
+        HERMES_VERSION: "0.19.0"
+        BMAD_LOOP_VERSION: "0.10.0"
+        UV_VERSION: "0.8.14"
+        PRIME_AGENT_VERSION: "0.7.3"
+        COPILOT_VERSION: "latest"
+    image: autonomous-agent-lab:0.1.0
+    container_name: autonomous-agent-lab
+    restart: unless-stopped
+    init: true
+    tty: true
+    stdin_open: true
+    ports:
+      - "127.0.0.1:${HERMES_PORT:-9119}:9119"
+      - "127.0.0.1:${MONITOR_PORT:-9121}:9121"
+    environment:
+      TZ: ${TZ:-UTC}
+      LAB_MODE: ${LAB_MODE:-development}
+      LAB_PROVIDER: ${LAB_PROVIDER:-copilot}
+      COPILOT_MODEL: ${COPILOT_MODEL:-}
+      COPILOT_SUBAGENT_MODEL: ${COPILOT_SUBAGENT_MODEL:-inherit}
+      COPILOT_SUBAGENT_EFFORT: ${COPILOT_SUBAGENT_EFFORT:-inherit}
+      COPILOT_SUBAGENT_CONTEXT: ${COPILOT_SUBAGENT_CONTEXT:-inherit}
+      COPILOT_SUBAGENT_NAMES: ${COPILOT_SUBAGENT_NAMES:-explore,task,code-review,general-purpose,research,security-review,rubber-duck}
+      BMAD_OUTPUT_DIR: ${BMAD_OUTPUT_DIR:-_bmad-output}
+      BMAD_PLANNING_ARTIFACTS_DIR: ${BMAD_PLANNING_ARTIFACTS_DIR:-}
+      BMAD_IMPLEMENTATION_ARTIFACTS_DIR: ${BMAD_IMPLEMENTATION_ARTIFACTS_DIR:-}
+      BMAD_COMMUNICATION_LANGUAGE: ${BMAD_COMMUNICATION_LANGUAGE:-spanish}
+      BMAD_DOCUMENT_LANGUAGE: ${BMAD_DOCUMENT_LANGUAGE:-spanish}
+      BMAD_PROJECT_NAME: ${BMAD_PROJECT_NAME:-}
+      BMAD_USER_NAME: ${BMAD_USER_NAME:-}
+      NOTIFY_CHANNELS: ${NOTIFY_CHANNELS:-}
+      NOTIFY_EVENTS: ${NOTIFY_EVENTS:-paused,awaiting-operator,crashed,finished}
+      NOTIFY_PROJECT_NAME: ${NOTIFY_PROJECT_NAME:-Autonomous Agent Lab}
+      NOTIFY_MONITOR_URL: ${NOTIFY_MONITOR_URL:-http://localhost:9121}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
+      TELEGRAM_COMMANDS: ${TELEGRAM_COMMANDS:-read-only}
+      NTFY_URL: ${NTFY_URL:-https://ntfy.sh}
+      NTFY_TOPIC: ${NTFY_TOPIC:-}
+      NTFY_TOKEN: ${NTFY_TOKEN:-}
+      RESEARCH_PROVIDER: ${RESEARCH_PROVIDER:-github-copilot}
+      RESEARCH_MODEL: ${RESEARCH_MODEL:-disabled}
+      RESEARCH_TOKEN_BUDGET: ${RESEARCH_TOKEN_BUDGET:-30000}
+      AGENT_CONTROL_PROJECT_PATH: /workspace/project
+      AGENT_CONTROL_DATA_DIR: /workspace/output/control
+      AGENT_CONTROL_LOG_DIR: /workspace/output/development/logs
+      PRIME_WORKERS_DIR: /home/agent/.prime/agent/daemon-workers
+      GIT_USER_NAME: ${GIT_USER_NAME:?Set GIT_USER_NAME in .env}
+      GIT_USER_EMAIL: ${GIT_USER_EMAIL:?Set GIT_USER_EMAIL in .env}
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
+    volumes:
+      - type: bind
+        source: ${PROJECT_PATH:?Set PROJECT_PATH in .env}
+        target: /workspace/project
+      - type: bind
+        source: ${OUTPUT_PATH:?Set OUTPUT_PATH in .env}
+        target: /workspace/output
+      - hermes-home:/home/agent/.hermes
+      - github-auth:/home/agent/.config/gh
+      - copilot-auth:/home/agent/.copilot
+      - prime-home:/home/agent/.prime
+      - git-config:/home/agent/.config/git
+      - opencode-home:/home/agent/.local/share/opencode
+    healthcheck:
+      test: ["CMD", "lab", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  hermes-home:
+  github-auth:
+  copilot-auth:
+  prime-home:
+  git-config:
+  opencode-home:

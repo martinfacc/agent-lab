@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monitor · Autonomous Agent Lab</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b0f14; --panel:#121923; --line:#263244; --text:#e7edf5; --muted:#8fa1b7; --ok:#4ade80; --warn:#fbbf24; --bad:#fb7185; --accent:#60a5fa; }
+    * { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace }
+    header { display:flex; justify-content:space-between; gap:20px; padding:18px 24px; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,15,20,.96); z-index:2 }
+    h1,h2 { margin:0 } h1 { font-size:18px } h2 { font-size:14px; margin-bottom:12px; color:#c8d5e5 }
+    .connection { color:var(--warn) } .connection.live { color:var(--ok) }
+    main { padding:20px 24px; display:grid; grid-template-columns:repeat(12,1fr); gap:16px }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0 }
+    .summary { grid-column:span 8 } .git { grid-column:span 4 } .tasks,.processes { grid-column:span 6; height:300px; display:flex; flex-direction:column } .terminals,.logs { grid-column:1/-1 }
+    #tasks,#processes { min-height:0; overflow:auto }
+    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px }
+    .label { color:var(--muted); font-size:12px } .value { font-size:15px; overflow-wrap:anywhere; margin-top:3px }
+    .badge { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 8px }
+    .running { color:var(--accent) } .finished { color:var(--ok) } .paused,.interrupted { color:var(--warn) } .crashed,.stopped { color:var(--bad) }
+    table { width:100%; border-collapse:collapse } th,td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top } th { color:var(--muted); font-weight:500 }
+    .git-changes { display:grid; gap:5px; margin-top:4px; max-height:220px; overflow:auto }
+    .git-change { display:grid; grid-template-columns:20px minmax(0,1fr); gap:7px; align-items:start }
+    .git-symbol { font-weight:800; text-align:center } .git-plus { color:var(--ok) } .git-minus { color:var(--bad) } .git-modified { color:var(--warn) } .git-renamed { color:var(--accent) }
+    .git-path { overflow-wrap:anywhere }
+    .terminal-output { max-height:48vh }
+    pre { margin:0; max-height:48vh; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; color:#cbd5e1 }
+    .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px } button { color:var(--text); background:#1a2533; border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer }
+    .empty { color:var(--muted) } @media(max-width:900px){ .summary,.git,.tasks,.processes{grid-column:1/-1}.grid{grid-template-columns:repeat(2,1fr)} }
+  </style>
+</head>
+<body>
+  <header><div><h1>Autonomous Agent Lab</h1><div class="label">Monitor de desarrollo · solo lectura</div></div><div id="connection" class="connection">Conectando…</div></header>
+  <main>
+    <section class="card summary"><h2>Ejecución actual</h2><div id="summary" class="empty">Sin datos</div></section>
+    <section class="card git"><h2>Git</h2><div id="git" class="empty">Sin datos</div></section>
+    <section class="card tasks"><h2>Progreso</h2><div id="tasks" class="empty">Sin datos</div></section>
+    <section class="card processes"><h2>Procesos observables</h2><div id="processes" class="empty">Sin procesos</div></section>
+    <section class="card terminals"><div class="toolbar"><h2>Sesiones de IA</h2><button id="follow-terminals">Autoscroll: sí</button></div><div id="terminals" class="empty">Sin sesiones</div></section>
+    <section class="card logs"><div class="toolbar"><h2>Logs en vivo</h2><button id="follow">Autoscroll: sí</button></div><pre id="logs">Esperando logs…</pre></section>
+  </main>
+  <script>
+    const el = id => document.getElementById(id); let follow = true, followTerminals = true;
+    const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function gitChange(line) {
+      const raw = String(line || ''), code = raw.slice(0, 2), path = raw.slice(3) || raw;
+      if (code === '??' || code.includes('A')) return { symbol: '+', css: 'git-plus', path, code };
+      if (code.includes('D')) return { symbol: '−', css: 'git-minus', path, code };
+      if (code.includes('R')) return { symbol: '→', css: 'git-renamed', path, code };
+      return { symbol: '±', css: 'git-modified', path, code };
+    }
+    el('follow').onclick = () => { follow = !follow; el('follow').textContent = `Autoscroll: ${follow ? 'sí' : 'no'}` };
+    el('follow-terminals').onclick = () => { followTerminals = !followTerminals; el('follow-terminals').textContent = `Autoscroll: ${followTerminals ? 'sí' : 'no'}` };
+    function render(data) {
+      const run = data.latest;
+      el('summary').innerHTML = run ? `<div class="grid"><div><div class="label">Run ID</div><div class="value">${safe(run.run_id)}</div></div><div><div class="label">Estado</div><div class="value badge ${safe(run.status)}">${safe(run.status)}</div></div><div><div class="label">Épica</div><div class="value">${safe(run.current_epic ?? '—')}</div></div><div><div class="label">Story/fase</div><div class="value">${safe(run.current_task?.story_key ?? '—')} · ${safe(run.current_task?.phase ?? '—')}</div></div></div>${run.paused_reason ? `<p class="paused">${safe(run.paused_reason)}</p>` : ''}` : '<span class="empty">No hay ejecuciones registradas.</span>';
+      const git = data.git;
+      const changes = git.changes.map(gitChange);
+      const changeList = changes.length ? `<div class="git-changes">${changes.map(change => `<div class="git-change" title="Estado Git: ${safe(change.code)}"><span class="git-symbol ${change.css}">${change.symbol}</span><span class="git-path">${safe(change.path)}</span></div>`).join('')}</div>` : '<div class="finished">Worktree limpio</div>';
+      el('git').innerHTML = `<div class="label">Rama</div><div class="value">${safe(git.branch || '—')}</div><div class="label" style="margin-top:10px">Último commit</div><div>${safe(git.commit || '—')}</div><div class="label" style="margin-top:10px">Cambios</div>${changeList}`;
+      const counts = run?.task_counts || {}; el('tasks').innerHTML = Object.keys(counts).length ? `<table><thead><tr><th>Fase</th><th>Cantidad</th></tr></thead><tbody>${Object.entries(counts).map(([k,v])=>`<tr><td>${safe(k)}</td><td>${safe(v)}</td></tr>`).join('')}</tbody></table>` : '<span class="empty">Todavía no hay tareas.</span>';
+      el('processes').innerHTML = data.processes.length ? `<table><thead><tr><th>PID</th><th>Tiempo</th><th>Proceso</th></tr></thead><tbody>${data.processes.map(p=>`<tr><td>${safe(p.pid)}</td><td>${safe(p.seconds)}s</td><td title="${safe(p.args)}">${safe(p.command)}</td></tr>`).join('')}</tbody></table>` : '<span class="empty">No hay procesos BMAD/Copilot activos.</span>';
+      const terminals = el('terminals');
+      terminals.innerHTML = data.terminals.length ? data.terminals.map(t=>`<div class="label">${safe(t.session)} · ${safe(t.command)} · ${safe(t.pane)}</div><pre class="terminal-output">${safe(t.output || 'Sin salida visible')}</pre>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">') : '<span class="empty">No hay paneles tmux activos.</span>';
+      if (followTerminals) terminals.querySelectorAll('.terminal-output').forEach(output => { output.scrollTop = output.scrollHeight });
+      const log = el('logs'); log.textContent = data.logs.lines.join('\n') || 'Todavía no hay logs.'; if (follow) log.scrollTop = log.scrollHeight;
+      el('connection').textContent = `En vivo · ${new Date(data.timestamp * 1000).toLocaleTimeString()}`; el('connection').className = 'connection live';
+    }
+    const events = new EventSource('/api/events'); events.onmessage = event => render(JSON.parse(event.data)); events.onerror = () => { el('connection').textContent='Reconectando…'; el('connection').className='connection' };
+  </script>
+</body>
+</html>

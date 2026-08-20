@@ -1,0 +1,7 @@
+.git
+.env
+data
+output
+docs
+components/agent-control/node_modules
+components/agent-control/.git

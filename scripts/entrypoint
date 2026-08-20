@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$(id -u)" = "0" ]; then
+  mkdir -p \
+    /home/agent/.hermes \
+    /home/agent/.config/gh \
+    /home/agent/.config/git \
+    /home/agent/.copilot \
+    /home/agent/.prime \
+    /home/agent/.local/share/opencode \
+    /home/agent/.local/state
+  chown -R agent:agent \
+    /home/agent/.hermes \
+    /home/agent/.config/gh \
+    /home/agent/.config/git \
+    /home/agent/.copilot \
+    /home/agent/.prime \
+    /home/agent/.local/share/opencode \
+    /home/agent/.local/state
+  exec runuser --user agent --preserve-environment -- "$0" "$@"
+fi
+
+mkdir -p \
+  /workspace/output/control \
+  /workspace/output/development/logs \
+  /workspace/output/research \
+  "$HOME/.hermes" "$HOME/.config/gh" "$HOME/.config/git" \
+  "$HOME/.copilot" "$HOME/.prime" "$HOME/.local/share/opencode" \
+  "$HOME/.local/state"
+
+git config --global user.name "${GIT_USER_NAME}"
+git config --global user.email "${GIT_USER_EMAIL}"
+git config --global core.autocrlf input
+git config --global --add safe.directory /workspace/project
+
+/usr/local/lib/agent-lab/install-hermes-skills
+/usr/local/lib/agent-lab/prepare-workspace
+# prepare-workspace resuelve la ubicación real para instalaciones BMAD propias o externas.
+# shellcheck disable=SC1091
+source "${BMAD_RUNTIME_ENV:-/workspace/output/control/bmad-runtime.env}"
+cd /workspace/project
+
+exec lab "$@"
