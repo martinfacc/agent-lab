@@ -22,10 +22,10 @@ carpeta de salida y no incluye el repositorio ni las credenciales.
 
 El laboratorio usa como destino la rama seleccionada en `PROJECT_PATH` y no crea una rama permanente. Durante el desarrollo, `bmad-loop` crea worktrees y ramas temporales por story y los elimina después de integrarlos. Los archivos locales requeridos se excluyen mediante `.git/info/exclude` y no se versionan. El proyecto se agrega automáticamente a `trustedFolders` de Copilot porque es el alcance elegido por el usuario; no se confía en ninguna otra ruta del host.
 
-No hace falta instalar BMAD en el repositorio. Si ya existe `_bmad`, el
-laboratorio lo valida y respeta. Si no existe, usa la distribución incluida en
-Docker. En este segundo caso, `BMAD_OUTPUT_DIR` y las rutas opcionales de
-planificación e implementación se configuran en `.env` antes de iniciar.
+No hace falta instalar BMAD en el repositorio. Agent Lab consume los artefactos
+desde las rutas configuradas en `.env`. Si un repositorio ya trae `_bmad`, se
+admite como compatibilidad con una instalación existente: se valida, se respeta
+y nunca se reemplaza.
 
 Las credenciales no se incluyen en la imagen. Copilot CLI reutiliza la autenticación de GitHub CLI y el onboarding valida el acceso con una consulta breve; no abre un segundo callback OAuth.
 

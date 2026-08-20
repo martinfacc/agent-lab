@@ -89,16 +89,20 @@ El checkout indicado por `PROJECT_PATH` se monta directamente en `/workspace/pro
 
 `bmad-loop` necesita algunos archivos locales dentro del proyecto. Se excluyen mediante `.git/info/exclude`, sin modificar `.gitignore`, y nunca forman parte de los commits. El proyecto se registra como carpeta confiable de Copilot en su volumen persistente para evitar diálogos que bloquearían la ejecución autónoma.
 
-### BMAD propio o provisto por el laboratorio
+### Contrato de artefactos BMAD
 
-El repositorio no necesita instalar BMAD para usar el laboratorio:
+El repositorio sólo debe aportar los artefactos que usará el desarrollo. No
+necesita instalar BMAD. El laboratorio aporta internamente el runtime compatible
+necesario para ejecutarlos.
 
-- Si contiene `_bmad/bmm/config.yaml`, el arranque valida esa instalación y
-  respeta sus módulos, personalizaciones y rutas de artefactos.
-- Si no contiene `_bmad`, la imagen proyecta su distribución BMAD en tiempo de
-  ejecución. `_bmad` y las skills proyectadas quedan excluidas localmente de Git.
-- Si existe `_bmad` pero está incompleto o es inválido, el contenedor se detiene
-  con el motivo concreto; nunca instala otra versión por encima.
+Por lo tanto, el caso normal es un repositorio sin `_bmad`. La imagen proyecta
+temporalmente su runtime durante la ejecución; esos archivos se excluyen
+localmente de Git y nunca forman parte de los commits.
+
+Como compatibilidad, si un repositorio ya contiene `_bmad/bmm/config.yaml`, el
+arranque valida y respeta esa instalación existente. Si la carpeta está
+incompleta o es incompatible, el contenedor se detiene con el motivo concreto y
+no la reemplaza.
 
 La imagen controla internamente la versión compatible de BMAD Method. Esa versión
 no forma parte de la configuración del usuario ni impone una instalación sobre el
