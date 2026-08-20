@@ -67,6 +67,8 @@ export function registerDevelopmentTools(
       return asText({
         run_id: run.run_id,
         run_type: run.run_type,
+        queue_source: 'sprint-status',
+        sprint_status_path: config.sprintStatusPath,
         status: run.status,
         finished: run.finished,
         paused_stage: run.paused_stage,
@@ -123,7 +125,8 @@ export function registerDevelopmentTools(
   server.registerTool(
     'dev_start',
     {
-      description: 'Inicia una story de BMAD en segundo plano.',
+      description:
+        'Inicia en segundo plano una story identificada por su clave exacta en el sprint-status.yaml configurado. El valor no es una ruta ni una spec.',
       inputSchema: { story: z.string().min(1) },
     },
     async ({ story }) =>
@@ -133,7 +136,8 @@ export function registerDevelopmentTools(
   server.registerTool(
     'dev_start_epic',
     {
-      description: 'Inicia o completa todas las stories BMAD pendientes de una epic.',
+      description:
+        'Inicia o completa las stories pendientes de una epic enumeradas por el sprint-status.yaml configurado.',
       inputSchema: { epic: z.number().int().positive() },
     },
     async ({ epic }) =>
@@ -144,7 +148,7 @@ export function registerDevelopmentTools(
     'dev_start_project',
     {
       description:
-        'Inicia el desarrollo BMAD autónomo de todas las stories pendientes del proyecto.',
+        'Inicia el desarrollo autónomo de las stories pendientes enumeradas por el sprint-status.yaml configurado.',
     },
     async () => asText(await client.startRun([], { scope: 'project' })),
   );

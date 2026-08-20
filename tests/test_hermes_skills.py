@@ -21,6 +21,19 @@ class HermesSkillsTest(unittest.TestCase):
         self.assertIn("hermes-skills/", (ROOT / "Dockerfile").read_text(encoding="utf-8"))
         self.assertIn("install-hermes-skills", (ROOT / "scripts" / "entrypoint").read_text(encoding="utf-8"))
 
+    def test_sprint_status_is_the_only_story_queue_contract(self) -> None:
+        skill_content = SKILL.read_text(encoding="utf-8")
+        recovery_content = (SKILL.parent / "references" / "safe-recovery.md").read_text(
+            encoding="utf-8"
+        )
+        workspace_content = (ROOT / "scripts" / "prepare-workspace").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("cola autoritativa es el `sprint-status.yaml`", skill_content)
+        self.assertNotIn("stories.yaml", skill_content + recovery_content)
+        self.assertIn('source = "sprint-status"', workspace_content)
+        self.assertIn('spec_folder = ""', workspace_content)
+
 
 if __name__ == "__main__":
     unittest.main()

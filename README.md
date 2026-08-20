@@ -54,6 +54,10 @@ El resultado termina en `LISTO PARA DESARROLLAR` o enumera correcciones
 concretas. Comprueba Git limpio, acceso al remoto, GitHub, Copilot, artefactos
 BMAD, servicios locales y espacio disponible.
 
+`lab doctor` también comprueba que `bmad-loop` y `uv` sean visibles desde los
+shells de login utilizados por las sesiones de IA, no sólo desde el proceso
+principal del contenedor.
+
 Abrí `http://localhost:9119`.
 
 Para observar runs, procesos, Git y logs actualizados cada dos segundos, abrí `http://localhost:9121`. El monitor es de solo lectura y no puede iniciar, detener ni reanudar ejecuciones.

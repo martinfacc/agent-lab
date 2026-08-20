@@ -18,9 +18,16 @@ check_command() {
   fi
 }
 
-for command_name in git gh node npm hermes bmad-loop copilot opencode; do
+for command_name in git gh node npm hermes bmad-loop uv copilot opencode; do
   check_command "$command_name"
 done
+
+if bash -lc 'command -v bmad-loop >/dev/null && command -v uv >/dev/null'; then
+  echo 'ok   shell-agente       bmad-loop y uv disponibles en shells de IA'
+else
+  echo 'FALLA shell-agente      el shell de IA no encuentra bmad-loop o uv'
+  failures=$((failures + 1))
+fi
 
 if [ "${LAB_MODE:-development}" = 'full' ]; then
   check_command prime-agent

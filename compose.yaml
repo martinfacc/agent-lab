@@ -52,6 +52,7 @@ services:
       AGENT_CONTROL_PROJECT_PATH: /workspace/project
       AGENT_CONTROL_DATA_DIR: /workspace/output/control
       AGENT_CONTROL_LOG_DIR: /workspace/output/development/logs
+      PYTHONPATH: /opt/agent-lab/python
       PRIME_WORKERS_DIR: /home/agent/.prime/agent/daemon-workers
       GIT_USER_NAME: ${GIT_USER_NAME:?Set GIT_USER_NAME in .env}
       GIT_USER_EMAIL: ${GIT_USER_EMAIL:?Set GIT_USER_EMAIL in .env}

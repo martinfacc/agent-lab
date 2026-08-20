@@ -43,10 +43,21 @@ RUN python3 -m venv /home/agent/.venv && \
       "hermes-agent[all]==${HERMES_VERSION}" \
       "bmad-loop[opencode,tui] @ git+https://github.com/bmad-code-org/bmad-loop.git@v${BMAD_LOOP_VERSION}"
 
+COPY --chown=agent:agent scripts/python-sitecustomize.py \
+  /opt/agent-lab/python/sitecustomize.py
+ENV PYTHONPATH=/opt/agent-lab/python
+
 ENV PATH=/home/agent/.venv/bin:/home/agent/.local/bin:/opt/agent-control/node_modules/.bin:${PATH}
 
 # Prime publica artefactos versionados mediante su instalador oficial.
 USER root
+RUN ln -sf /home/agent/.venv/bin/bmad-loop /usr/local/bin/bmad-loop && \
+    ln -sf /home/agent/.venv/bin/hermes /usr/local/bin/hermes && \
+    ln -sf /home/agent/.venv/bin/uv /usr/local/bin/uv && \
+    printf '%s\n' \
+      'export PATH="/home/agent/.venv/bin:/home/agent/.local/bin:/opt/agent-control/node_modules/.bin:$PATH"' \
+      >/etc/profile.d/agent-lab-path.sh && \
+    chmod 0644 /etc/profile.d/agent-lab-path.sh
 RUN curl -fsSL https://app.primeintellect.ai/prime-agent/install.sh -o /tmp/prime-install.sh && \
     VERSION="${PRIME_AGENT_VERSION}" sh /tmp/prime-install.sh && \
     rm /tmp/prime-install.sh && \

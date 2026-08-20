@@ -12,6 +12,10 @@ un desarrollo gestionado por BMAD Loop.
 
 - Hermes conversa y coordina mediante `agent-control`; no implementa stories.
 - BMAD Loop mantiene el estado del run y orquesta a Copilot como adaptador.
+- La cola autoritativa es el `sprint-status.yaml` configurado. Una story se
+  identifica por su clave en ese tablero; no es una carpeta ni una spec.
+- El artefacto de implementación de una story se resuelve a partir de esa clave
+  dentro de la ruta configurada. No cambies el run a otro modo de entrada.
 - El checkout principal es la rama destino. Cada story trabaja en un worktree y
   rama temporales que BMAD integra y elimina después de validar.
 - MCP, monitor y notificaciones pueden estar vivos aunque BMAD o Copilot no lo estén.
@@ -36,6 +40,7 @@ antes de resolver un bloqueo.
 - No borres manualmente worktrees, ramas, runs, commits o refs preservadas.
 - No uses `reset --hard`, `clean` ni descarte de cambios como recuperación automática.
 - No edites estado, journal o sprint-status para forzar un resultado.
+- No busques ni inventes manifiestos alternativos para enumerar stories.
 - No introduzcas archivos operativos en commits del proyecto.
 - No inicies otro run para el mismo alcance hasta reconciliar el existente.
 - No avances una story si una anterior sigue pendiente, escalada o sin commit verificado.

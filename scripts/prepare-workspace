@@ -57,6 +57,10 @@ if [ -n "$copilot_model" ]; then
   sed -i "/^\[adapter\]$/,/^\[/{s|^model = \"[^\"]*\"|model = \"$copilot_model\"|;}" "$policy"
 fi
 sed -i '/^\[scm\]$/,/^\[/{s/^isolation = "none"/isolation = "worktree"/;s/^branch_per = "[^"]*"/branch_per = "story"/;s/^delete_branch = false/delete_branch = true/;s/^max_parallel = [0-9][0-9]*/max_parallel = 1/;}' "$policy"
+sed -i '/^\[stories\]$/,/^\[/{s/^source = "[^"]*"/source = "sprint-status"/;s/^spec_folder = "[^"]*"/spec_folder = ""/;}' "$policy"
+# El contenedor no tiene una sesión gráfica Linux. Los avisos externos se
+# publican desde ATTENTION mediante notification-worker (ntfy/Telegram).
+sed -i '/^\[notify\]$/,/^\[/{s/^desktop = true/desktop = false/;s/^file = false/file = true/;}' "$policy"
 
 if ! grep -A 3 '^\[adapter\]$' "$policy" | grep -q '^name = "copilot"'; then
   echo 'No se pudo configurar Copilot como adaptador de bmad-loop.' >&2
@@ -73,6 +77,21 @@ fi
 
 if ! sed -n '/^\[scm\]$/,/^\[/p' "$policy" | grep -q '^isolation = "worktree"'; then
   echo 'No se pudo configurar el aislamiento por worktree.' >&2
+  exit 1
+fi
+
+if ! sed -n '/^\[stories\]$/,/^\[/p' "$policy" | grep -q '^source = "sprint-status"'; then
+  echo 'No se pudo configurar sprint-status.yaml como fuente de stories.' >&2
+  exit 1
+fi
+
+if ! sed -n '/^\[notify\]$/,/^\[/p' "$policy" | grep -q '^desktop = false'; then
+  echo 'No se pudo desactivar el notificador gráfico dentro del contenedor.' >&2
+  exit 1
+fi
+
+if ! sed -n '/^\[notify\]$/,/^\[/p' "$policy" | grep -q '^file = true'; then
+  echo 'No se pudo habilitar ATTENTION para las notificaciones externas.' >&2
   exit 1
 fi
 
