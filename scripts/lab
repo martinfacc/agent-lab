@@ -19,6 +19,10 @@ Uso: lab <comando>
   login-prime    Inicia sesión en Prime Agent
   setup-hermes   Configura el proveedor y modelo de Hermes
   doctor         Valida la instalación completa
+  preflight      Confirma si el proyecto está listo para iniciar un desarrollo
+  runs           Muestra runs interrumpidos que pueden recuperarse
+  recover ID     Reanuda explícitamente un run interrumpido
+  support-bundle Genera un ZIP de diagnóstico sanitizado
   healthcheck    Comprueba rápidamente la salud del contenedor
   shell          Abre una terminal dentro del proyecto montado
 EOF
@@ -135,6 +139,22 @@ case "${1:-serve}" in
     ;;
   doctor)
     /usr/local/lib/agent-lab/doctor
+    ;;
+  preflight)
+    /usr/local/lib/agent-lab/preflight
+    ;;
+  runs)
+    python3 /usr/local/lib/agent-lab/run-recovery.py scan --write
+    ;;
+  recover)
+    if [ -z "${2:-}" ]; then
+      echo 'Uso: lab recover <run-id>' >&2
+      exit 2
+    fi
+    python3 /usr/local/lib/agent-lab/run-recovery.py recover "$2"
+    ;;
+  support-bundle)
+    python3 /usr/local/lib/agent-lab/support-bundle.py
     ;;
   healthcheck)
     curl --fail --silent http://127.0.0.1:9119/ >/dev/null

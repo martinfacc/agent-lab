@@ -8,6 +8,8 @@
 - Los avisos externos pueden contener nombres de stories, errores y acciones pendientes. Habilitalos únicamente en chats o tópicos privados. Para ntfy sin autenticación usá un tópico largo e imposible de adivinar.
 - El `push` automático, `force push`, borrado de ramas y limpieza destructiva quedan fuera del piloto.
 - Revisá los logs antes de compartirlos por si contienen información sensible.
+- El paquete de soporte no incluye `.env`, código fuente, credenciales, prompts ni logs completos de sesiones IA. Aun así, revisalo antes de compartirlo fuera del equipo.
+- La detección de runs interrumpidos es pasiva; reanudar requiere seleccionar explícitamente un `run-id`.
 - `docker compose down -v` elimina credenciales y sesiones, pero no las carpetas montadas del host.
 - ntfy es únicamente saliente. Telegram recibe comandos mediante long polling,
   restringe el acceso con `TELEGRAM_ALLOWED_CHAT_IDS` y registra cada intento en

@@ -68,6 +68,20 @@ La preferencia de modelo de los subagentes se escribe en
 Por defecto los agentes incorporados heredan modelo, esfuerzo y contexto de la
 sesión principal. No se crea `.github/copilot/settings.json` en el proyecto.
 
+## Diagnóstico y recuperación
+
+`lab preflight` es el gate previo a una ejecución. `doctor` diagnostica la
+instalación; `preflight` responde si es seguro iniciar desarrollo.
+
+En cada arranque, `run-recovery.py` registra runs no terminales sin motor ni
+sesión tmux. La detección no modifica el desarrollo. La recuperación requiere
+`lab recover <run-id>` y delega en `bmad-loop resume`, conservando el estado,
+worktree y commits del run original.
+
+`lab support-bundle` produce evidencia acotada en `/workspace/output/support`.
+La selección de datos usa una lista permitida y redacta valores con apariencia
+de secreto antes de escribir el ZIP.
+
 ## Política de versiones
 
 Los argumentos de construcción fijan las versiones validadas. Copilot todavía usa la versión npm actual; antes de producción debemos fijar una versión exacta probada y registrar los digests.

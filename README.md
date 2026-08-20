@@ -39,6 +39,16 @@ docker compose exec -it agent-lab lab setup
 docker compose exec agent-lab lab doctor
 ```
 
+Antes de iniciar el primer desarrollo, ejecutá:
+
+```console
+docker compose exec agent-lab lab preflight
+```
+
+El resultado termina en `LISTO PARA DESARROLLAR` o enumera correcciones
+concretas. Comprueba Git limpio, acceso al remoto, GitHub, Copilot, artefactos
+BMAD, servicios locales y espacio disponible.
+
 Abrí `http://localhost:9119`.
 
 Para observar runs, procesos, Git y logs actualizados cada dos segundos, abrí `http://localhost:9121`. El monitor es de solo lectura y no puede iniciar, detener ni reanudar ejecuciones.
@@ -158,6 +168,30 @@ docker compose start
 docker compose exec agent-lab lab doctor
 docker compose exec agent-lab lab shell
 ```
+
+### Recuperar una ejecución interrumpida
+
+Al arrancar, el laboratorio detecta runs que estaban en progreso pero perdieron
+su proceso por un reinicio de Docker. Nunca los reanuda automáticamente ni crea
+un run reemplazante:
+
+```console
+docker compose exec agent-lab lab runs
+docker compose exec agent-lab lab recover 20260820-162654-532a
+```
+
+Un run pausado en un gate de BMAD no se clasifica como interrumpido.
+
+### Paquete de diagnóstico
+
+```console
+docker compose exec agent-lab lab support-bundle
+```
+
+El ZIP queda bajo `OUTPUT_PATH/support/`. Incluye versiones, configuración no
+sensible, validación BMAD, estado de Git, worktrees, procesos y un resumen del
+run más reciente. Excluye el código fuente, `.env`, credenciales, prompts y logs
+completos de las sesiones de IA.
 
 ## Notificaciones opcionales
 

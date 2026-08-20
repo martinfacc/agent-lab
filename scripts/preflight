@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+project="${AGENT_CONTROL_PROJECT_PATH:-/workspace/project}"
+runtime_env="${BMAD_RUNTIME_ENV:-/workspace/output/control/bmad-runtime.env}"
+failures=0
+warnings=0
+
+ok() { printf 'OK      %s\n' "$1"; }
+fail() { printf 'FALLA   %s\n' "$1"; failures=$((failures + 1)); }
+warn() { printf 'AVISO   %s\n' "$1"; warnings=$((warnings + 1)); }
+
+if [ -f "$runtime_env" ]; then
+  # shellcheck disable=SC1090
+  source "$runtime_env"
+else
+  fail "No existe la resolución de BMAD: $runtime_env"
+fi
+
+for command_name in git gh bmad-loop copilot; do
+  if command -v "$command_name" >/dev/null 2>&1; then
+    ok "$command_name disponible"
+  else
+    fail "$command_name no está disponible"
+  fi
+done
+
+if git -C "$project" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  ok 'El proyecto es un repositorio Git'
+else
+  fail "$project no es un repositorio Git"
+fi
+
+if [ -w "$project" ] && [ -w /workspace/output ]; then
+  ok 'El proyecto y la salida permiten escritura'
+else
+  fail 'Faltan permisos de escritura en el proyecto o la salida'
+fi
+
+if [ -n "$(git -C "$project" status --porcelain 2>/dev/null)" ]; then
+  fail 'El repositorio tiene cambios sin guardar; hacé commit o stash antes de iniciar'
+else
+  ok 'El repositorio está limpio'
+fi
+
+if gh auth status --hostname github.com >/dev/null 2>&1; then
+  ok 'GitHub está autenticado'
+else
+  fail 'GitHub no está autenticado; ejecutá: lab login-github'
+fi
+
+if timeout 45 copilot -sp 'Respond exactly: COPILOT_OK' 2>/dev/null | grep -q 'COPILOT_OK'; then
+  ok 'GitHub Copilot responde correctamente'
+else
+  fail 'Copilot no pudo responder; ejecutá: lab login-copilot'
+fi
+
+remote_url="$(git -C "$project" remote get-url origin 2>/dev/null || true)"
+if [ -z "$remote_url" ]; then
+  warn 'El repositorio no tiene un remoto origin'
+elif git -C "$project" ls-remote --exit-code origin HEAD >/dev/null 2>&1; then
+  ok 'El remoto origin es accesible'
+else
+  fail 'No se pudo acceder al remoto origin con las credenciales actuales'
+fi
+
+if [ -n "${BMAD_SPRINT_STATUS_PATH:-}" ] && [ -f "${BMAD_SPRINT_STATUS_PATH}" ]; then
+  ok "Artefactos BMAD resueltos: ${BMAD_SPRINT_STATUS_PATH}"
+else
+  fail 'No se encontró sprint-status.yaml en la ruta de artefactos configurada'
+fi
+
+if bmad-loop validate --project "$project" >/tmp/agent-lab-preflight-bmad.log 2>&1; then
+  ok 'La configuración de BMAD Loop es válida'
+else
+  fail 'BMAD Loop no superó la validación'
+  sed 's/^/        /' /tmp/agent-lab-preflight-bmad.log
+fi
+
+for endpoint in 'http://127.0.0.1:9119/' 'http://127.0.0.1:9121/api/snapshot'; do
+  if curl --fail --silent --max-time 5 "$endpoint" >/dev/null; then
+    ok "Servicio local disponible: $endpoint"
+  else
+    fail "Servicio local no disponible: $endpoint"
+  fi
+done
+
+free_kb="$(df -Pk /workspace/output 2>/dev/null | awk 'NR==2 {print $4}')"
+if [[ "$free_kb" =~ ^[0-9]+$ ]] && [ "$free_kb" -lt 1048576 ]; then
+  warn 'Queda menos de 1 GiB libre para logs, worktrees y resultados'
+else
+  ok 'Hay espacio disponible para la ejecución'
+fi
+
+printf '\nResultado: %d falla(s), %d aviso(s).\n' "$failures" "$warnings"
+if [ "$failures" -eq 0 ]; then
+  echo 'LISTO PARA DESARROLLAR'
+else
+  echo 'NO ESTÁ LISTO PARA DESARROLLAR'
+fi
+exit "$failures"

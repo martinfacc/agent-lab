@@ -41,4 +41,7 @@ git config --global --add safe.directory /workspace/project
 source "${BMAD_RUNTIME_ENV:-/workspace/output/control/bmad-runtime.env}"
 cd /workspace/project
 
+# Detecta evidencia recuperable, pero nunca reanuda trabajo sin una orden explícita.
+python3 /usr/local/lib/agent-lab/run-recovery.py scan --write >/dev/null || true
+
 exec lab "$@"

@@ -27,7 +27,7 @@ def read_json(path: Path) -> dict[str, Any] | None:
 
 def engine_is_alive(run_dir: Path) -> bool:
     try:
-        pid = int((run_dir / "engine.pid").read_text(encoding="utf-8").strip())
+        pid = int((run_dir / "engine.pid").read_text(encoding="utf-8").split()[0])
         command = (Path("/proc") / str(pid) / "cmdline").read_bytes().replace(b"\0", b" ")
         return b"bmad-loop" in command
     except (OSError, ValueError):
@@ -92,6 +92,7 @@ def load_runs() -> list[dict[str, Any]]:
             {
                 "run_id": state.get("run_id", state_path.parent.name),
                 "status": status_name(state, state_path.parent),
+                "recoverable": status_name(state, state_path.parent) == "interrupted",
                 "started_at": state.get("started_at"),
                 "current_epic": state.get("current_epic"),
                 "paused_stage": state.get("paused_stage"),
