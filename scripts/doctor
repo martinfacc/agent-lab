@@ -57,6 +57,12 @@ bmad-loop validate --project /workspace/project || failures=$((failures + 1))
 if [ "${LAB_MODE:-development}" = 'full' ]; then
   prime-agent doctor || failures=$((failures + 1))
 fi
-hermes mcp test agent-control || failures=$((failures + 1))
+if hermes mcp test agent-control; then
+  :
+else
+  echo 'FALLA agent-control      no está registrado o no responde'
+  echo '      Acción: ejecutá "lab setup" y repetí "lab doctor".'
+  failures=$((failures + 1))
+fi
 
 exit "$failures"

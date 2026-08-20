@@ -124,6 +124,12 @@ derivan de `BMAD_OUTPUT_DIR`. El archivo `sprint-status.yaml` debe estar dentro
 de `BMAD_IMPLEMENTATION_ARTIFACTS_DIR`. `agent-control` recibe automáticamente
 esa ubicación; no asume que exista `_bmad-output`.
 
+Las rutas explícitas no se concatenan con `BMAD_OUTPUT_DIR`. Por ejemplo,
+`BMAD_IMPLEMENTATION_ARTIFACTS_DIR=implementation-artifacts` apunta a una carpeta
+en la raíz del repositorio. Para usar
+`_pda-output/implementation-artifacts`, dejá la variable vacía cuando
+`BMAD_OUTPUT_DIR=_pda-output`, o escribí la ruta completa relativa al proyecto.
+
 La política conserva `max_parallel = 1` dentro de cada run. El aislamiento por story evita que distintas ejecuciones coordinadas por `agent-control` compartan archivos o el índice Git.
 
 Las credenciales y sesiones se mantienen en volúmenes Docker. Recrear el contenedor no las elimina. `docker compose down -v` **sí elimina esos volúmenes**.
