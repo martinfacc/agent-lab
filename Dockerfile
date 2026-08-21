@@ -77,6 +77,7 @@ COPY --chown=agent:agent scripts/ /usr/local/lib/agent-lab/
 
 USER root
 RUN chmod +x /usr/local/lib/agent-lab/* && \
+    ln -sf /usr/local/lib/agent-lab/bmad-loop-safe /usr/local/bin/bmad-loop && \
     ln -s /usr/local/lib/agent-lab/lab /usr/local/bin/lab && \
     ln -s /usr/local/lib/agent-lab/open-browser /usr/local/bin/lab-open-browser
 WORKDIR /workspace/project

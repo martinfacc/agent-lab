@@ -65,9 +65,9 @@ def main() -> int:
     configuration = {name: os.environ.get(name, "") for name in allowed_env}
     evidence = {
         "versions.txt": command(["bash", "-c", "lab --help >/dev/null; node --version; npm --version; hermes --version; bmad-loop --version; copilot --version"]),
-        "git.txt": command(["git", "-C", str(PROJECT), "status", "--short", "--branch"])
-        + command(["git", "-C", str(PROJECT), "log", "-10", "--oneline", "--decorate"])
-        + command(["git", "-C", str(PROJECT), "worktree", "list", "--porcelain"]),
+        "git.txt": command(["git", "--no-optional-locks", "-C", str(PROJECT), "status", "--short", "--branch"])
+        + command(["git", "--no-optional-locks", "-C", str(PROJECT), "log", "-10", "--oneline", "--decorate"])
+        + command(["git", "--no-optional-locks", "-C", str(PROJECT), "worktree", "list", "--porcelain"]),
         "processes.txt": command(["ps", "-eo", "pid,ppid,user,etime,stat,comm,args"]),
         "disk.txt": command(["df", "-h", str(PROJECT), str(OUTPUT)]),
         "configuration.json": json.dumps(configuration, ensure_ascii=False, indent=2),

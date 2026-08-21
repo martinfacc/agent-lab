@@ -236,21 +236,21 @@ def latest_logs(run_id: str | None) -> dict[str, Any]:
 def git_status() -> dict[str, Any]:
     try:
         branch = subprocess.run(
-            ["git", "-C", str(PROJECT), "branch", "--show-current"],
+            ["git", "--no-optional-locks", "-C", str(PROJECT), "branch", "--show-current"],
             check=True,
             capture_output=True,
             text=True,
             timeout=3,
         ).stdout.strip()
         changes = subprocess.run(
-            ["git", "-C", str(PROJECT), "status", "--short"],
+            ["git", "--no-optional-locks", "-C", str(PROJECT), "status", "--short"],
             check=True,
             capture_output=True,
             text=True,
             timeout=3,
         ).stdout.splitlines()
         commit = subprocess.run(
-            ["git", "-C", str(PROJECT), "log", "-1", "--format=%h %s"],
+            ["git", "--no-optional-locks", "-C", str(PROJECT), "log", "-1", "--format=%h %s"],
             check=True,
             capture_output=True,
             text=True,

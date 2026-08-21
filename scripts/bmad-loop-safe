@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+real_bmad_loop=/home/agent/.venv/bin/bmad-loop
+project="${AGENT_CONTROL_PROJECT_PATH:-$PWD}"
+command_name="${1:-}"
+
+previous=""
+for argument in "$@"; do
+  if [ "$previous" = "--project" ]; then
+    project="$argument"
+    break
+  fi
+  previous="$argument"
+done
+
+remove_stale_index_lock() {
+  case "$command_name" in
+    init|run|resume|resolve|confirm) ;;
+    *) return 0 ;;
+  esac
+
+  git_dir="$(git -C "$project" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  [ -n "$git_dir" ] || return 0
+  lock="$git_dir/index.lock"
+  [ -f "$lock" ] || return 0
+
+  # Nunca interferir con una operación Git real. Los locks legítimos suelen
+  # durar milisegundos; exigimos que esté vacío y lleve al menos 30 segundos.
+  [ ! -s "$lock" ] || return 0
+  modified="$(stat -c %Y "$lock" 2>/dev/null || printf '0')"
+  now="$(date +%s)"
+  [ $((now - modified)) -ge 30 ] || return 0
+  if pgrep -x git >/dev/null 2>&1 || pgrep -f '/git-' >/dev/null 2>&1; then
+    return 0
+  fi
+
+  rm -- "$lock"
+  echo "bmad-loop: se retiró un index.lock huérfano antes de $command_name." >&2
+}
+
+remove_stale_index_lock
+exec "$real_bmad_loop" "$@"
