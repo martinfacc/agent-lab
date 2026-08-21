@@ -15,6 +15,7 @@ RUNS_DIR = PROJECT / ".bmad-loop" / "runs"
 HTML_PATH = Path("/usr/local/lib/agent-lab/monitor.html")
 MAX_LOG_LINES = 250
 ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+GIT_CACHE: dict[str, dict[str, Any]] = {}
 
 
 def read_json(path: Path) -> dict[str, Any] | None:
@@ -233,37 +234,75 @@ def latest_logs(run_id: str | None) -> dict[str, Any]:
     return {"files": [str(path) for path in selected], "lines": lines[-MAX_LOG_LINES:]}
 
 
-def git_status() -> dict[str, Any]:
+def active_git_target(latest: dict[str, Any] | None) -> tuple[Path, str]:
+    if latest:
+        task = latest.get("current_task")
+        if isinstance(task, dict):
+            raw_path = task.get("worktree_path")
+            story = str(task.get("story_key", "story activa"))
+            if isinstance(raw_path, str) and raw_path:
+                try:
+                    candidate = Path(raw_path).resolve()
+                    project = PROJECT.resolve()
+                    if candidate.is_relative_to(project) and candidate.is_dir():
+                        return candidate, f"Worktree activo · {story}"
+                except OSError:
+                    pass
+    return PROJECT, "Repositorio principal"
+
+
+def git_status(repository: Path, source: str) -> dict[str, Any]:
+    cache_key = str(repository)
     try:
         branch = subprocess.run(
-            ["git", "--no-optional-locks", "-C", str(PROJECT), "branch", "--show-current"],
+            ["git", "--no-optional-locks", "-C", str(repository), "branch", "--show-current"],
             check=True,
             capture_output=True,
             text=True,
             timeout=3,
         ).stdout.strip()
         changes = subprocess.run(
-            ["git", "--no-optional-locks", "-C", str(PROJECT), "status", "--short"],
+            ["git", "--no-optional-locks", "-C", str(repository), "status", "--short"],
             check=True,
             capture_output=True,
             text=True,
             timeout=3,
         ).stdout.splitlines()
         commit = subprocess.run(
-            ["git", "--no-optional-locks", "-C", str(PROJECT), "log", "-1", "--format=%h %s"],
+            ["git", "--no-optional-locks", "-C", str(repository), "log", "-1", "--format=%h %s"],
             check=True,
             capture_output=True,
             text=True,
             timeout=3,
         ).stdout.strip()
-        return {"branch": branch, "changes": changes, "commit": commit}
+        result = {
+            "branch": branch,
+            "changes": changes,
+            "commit": commit,
+            "source": source,
+            "available": True,
+            "stale": False,
+        }
+        GIT_CACHE[cache_key] = result
+        return result
     except (OSError, subprocess.SubprocessError):
-        return {"branch": "", "changes": [], "commit": ""}
+        cached = GIT_CACHE.get(cache_key)
+        if cached:
+            return {**cached, "source": source, "stale": True}
+        return {
+            "branch": "",
+            "changes": [],
+            "commit": "",
+            "source": source,
+            "available": False,
+            "stale": False,
+        }
 
 
 def snapshot() -> dict[str, Any]:
     runs = load_runs()
     latest = runs[0] if runs else None
+    git_repository, git_source = active_git_target(latest)
     return {
         "timestamp": time.time(),
         "runs": runs,
@@ -271,7 +310,7 @@ def snapshot() -> dict[str, Any]:
         "processes": process_list(),
         "terminals": terminal_list(),
         "logs": latest_logs(str(latest["run_id"]) if latest else None),
-        "git": git_status(),
+        "git": git_status(git_repository, git_source),
     }
 
 
