@@ -10,6 +10,15 @@ export function liveRuns(runs: BmadRun[]): BmadRun[] {
   return runs.filter((run) => liveStatuses.has(run.status));
 }
 
+export function recoverableRuns(runs: BmadRun[], story?: string): BmadRun[] {
+  return runs.filter((run) => {
+    if (!['stopped', 'interrupted'].includes(run.status)) return false;
+    return (run.tasks ?? []).some(
+      (task) => task.phase.endsWith('running') && (!story || task.story_key === story),
+    );
+  });
+}
+
 export function findNewRun(
   previousRuns: BmadRun[],
   currentRuns: BmadRun[],

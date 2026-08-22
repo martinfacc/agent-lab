@@ -85,6 +85,13 @@ def load_runs() -> list[dict[str, Any]]:
             (task for task in tasks if str(task.get("phase", "")).endswith("running")),
             None,
         )
+        run_status = status_name(state, state_path.parent)
+        if current and run_status in {"stopped", "interrupted"}:
+            current = {
+                **current,
+                "recorded_phase": current.get("phase"),
+                "phase": "interrupted",
+            }
         counts: dict[str, int] = {}
         for task in tasks:
             phase = str(task.get("phase", "unknown"))
@@ -92,8 +99,8 @@ def load_runs() -> list[dict[str, Any]]:
         runs.append(
             {
                 "run_id": state.get("run_id", state_path.parent.name),
-                "status": status_name(state, state_path.parent),
-                "recoverable": status_name(state, state_path.parent) == "interrupted",
+                "status": run_status,
+                "recoverable": run_status in {"interrupted", "stopped"} and current is not None,
                 "started_at": state.get("started_at"),
                 "current_epic": state.get("current_epic"),
                 "paused_stage": state.get("paused_stage"),

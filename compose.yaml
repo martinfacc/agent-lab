@@ -64,6 +64,9 @@ services:
       - type: bind
         source: ${OUTPUT_PATH:?Set OUTPUT_PATH in .env}
         target: /workspace/output
+      # Runtime operativo sobre filesystem Linux. Evita las limitaciones de
+      # rename/locking de los bind mounts de Docker Desktop para Windows.
+      - bmad-runtime:/workspace/project/.bmad-loop
       - hermes-home:/home/agent/.hermes
       - github-auth:/home/agent/.config/gh
       - copilot-auth:/home/agent/.copilot
@@ -78,6 +81,7 @@ services:
       start_period: 60s
 
 volumes:
+  bmad-runtime:
   hermes-home:
   github-auth:
   copilot-auth:

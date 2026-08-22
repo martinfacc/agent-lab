@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { DevelopmentConfig } from '../config.ts';
 import { sleep } from '../shared/time.ts';
-import { findNewRun, liveRuns, statusArguments } from './runs.ts';
+import { findNewRun, liveRuns, recoverableRuns, statusArguments } from './runs.ts';
 import type { BmadRun, BmadRunList, BmadTask, DevelopmentScope } from './types.ts';
 
 const execFileAsync = promisify(execFile);
@@ -99,6 +99,18 @@ export class BmadClient {
     return this.withLaunchLock(async () => {
       const before = await this.listRuns();
       const activeRuns = liveRuns(before.runs ?? []);
+      const recoverable = recoverableRuns(
+        before.runs ?? [],
+        scope.scope === 'story' ? scope.story : undefined,
+      );
+      if (recoverable.length > 0) {
+        return {
+          started: false,
+          reason: 'recoverable-run-exists',
+          ...scope,
+          recoverable_runs: recoverable.map((run) => run.run_id),
+        };
+      }
       const child = await this.spawnDetached(
         ['run', ...args],
         `bmad-${this.timestamp()}.log`,

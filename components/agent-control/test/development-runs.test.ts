@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { findNewRun, liveRuns, statusArguments } from '../src/development/runs.ts';
+import {
+  findNewRun,
+  liveRuns,
+  recoverableRuns,
+  statusArguments,
+} from '../src/development/runs.ts';
 import type { BmadRun } from '../src/development/types.ts';
 
 const run = (runId: string, status: string): BmadRun => ({
@@ -32,4 +37,23 @@ void test('identifica la ejecución creada por un inicio serializado', () => {
   const current = [...previous, run('run-b', 'running')];
 
   assert.equal(findNewRun(previous, current)?.run_id, 'run-b');
+});
+
+void test('impide duplicar una story interrumpida que puede recuperarse', () => {
+  const stopped: BmadRun = {
+    run_id: 'run-stopped',
+    status: 'stopped',
+    tasks: [{ story_key: '4-1-demo', phase: 'dev-running' }],
+  };
+  const finished: BmadRun = {
+    run_id: 'run-finished',
+    status: 'finished',
+    tasks: [{ story_key: '4-1-demo', phase: 'done' }],
+  };
+
+  assert.deepEqual(
+    recoverableRuns([stopped, finished], '4-1-demo').map((item) => item.run_id),
+    ['run-stopped'],
+  );
+  assert.deepEqual(recoverableRuns([stopped], 'otra-story'), []);
 });

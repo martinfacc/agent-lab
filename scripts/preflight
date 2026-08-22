@@ -77,6 +77,33 @@ else
   sed 's/^/        /' /tmp/agent-lab-preflight-bmad.log
 fi
 
+smoke_root="$project/.bmad-loop/preflight"
+smoke_worktree="$smoke_root/worktree"
+smoke_cleanup() {
+  git -C "$project" worktree remove --force "$smoke_worktree" >/dev/null 2>&1 || true
+  rm -rf -- "$smoke_root"
+}
+smoke_cleanup
+if git -C "$project" worktree add --detach "$smoke_worktree" HEAD \
+    >/tmp/agent-lab-preflight-worktree.log 2>&1; then
+  renderer="$smoke_worktree/_bmad/scripts/render_skill.py"
+  skill="$smoke_worktree/.agents/skills/bmad-build"
+  if [ -f "$renderer" ] && [ -d "$skill" ] && \
+      PYTHONPATH=/opt/agent-lab/python uv run --no-cache "$renderer" \
+        --project-root "$smoke_worktree" --skill "$skill" \
+        >/tmp/agent-lab-preflight-render.log 2>&1; then
+    ok 'El render BMAD funciona dentro de un worktree real'
+  else
+    fail 'El render BMAD falló dentro de un worktree real'
+    sed 's/^/        /' /tmp/agent-lab-preflight-render.log 2>/dev/null || true
+  fi
+else
+  fail 'No se pudo crear el worktree de diagnóstico'
+  sed 's/^/        /' /tmp/agent-lab-preflight-worktree.log
+fi
+smoke_cleanup
+git -C "$project" worktree prune >/dev/null 2>&1 || true
+
 for endpoint in 'http://127.0.0.1:9119/' 'http://127.0.0.1:9121/api/snapshot'; do
   if curl --fail --silent --max-time 5 "$endpoint" >/dev/null; then
     ok "Servicio local disponible: $endpoint"
